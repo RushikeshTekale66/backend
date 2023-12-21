@@ -4,11 +4,12 @@ const User = require("../models/User");
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fetchuser = require("../middleware/fetchuser")
 
 const JWT_SECRET = 'RushikeshTekale';
 
 
-//Create user using : Post "/api/auth/createuser " No login require
+//Route 1 ) Create user using : Post "/api/auth/createuser " No login require
 router.post('/createuser', [
     body('name', 'Enter correct name').isLength({ min: 3 }),
     body('email', 'Enter valid Email').isEmail(),
@@ -61,7 +62,7 @@ router.post('/createuser', [
 
     })
 
-//Authounticate user using : Post "/api/auth/login " No login require
+//Route 2) Authounticate user using : Post "/api/auth/login " No login require
 router.post('/login', [
     body('email', 'Enter valid Email').isEmail(),
     body('password', 'Password can not be blank').exists()
@@ -73,33 +74,47 @@ router.post('/login', [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const {email, password} = req.body;
+        const { email, password } = req.body;
 
-        try{
-            let user = await User.findOne({email});
-            if(!user){
-                return res.status(400).json({error:"Please try to login with correct login email"});
+        try {
+            let user = await User.findOne({ email });
+            if (!user) {
+                return res.status(400).json({ error: "Please try to login with correct login email" });
             }
-            
+
             const passwordCompare = await bcrypt.compare(password, user.password);
-            if(!passwordCompare){
-                return res.status(400).json({error:"Please try to login with correct password"});
+            if (!passwordCompare) {
+                return res.status(400).json({ error: "Please try to login with correct password" });
             }
 
             const data = {
-                user:{
-                    id:user.id
+                user: {
+                    id: user.id
                 }
             }
             const authToken = jwt.sign(data, JWT_SECRET);
-            res.json({authToken});
+            res.json({ authToken });
         }
-        catch(error){
+        catch (error) {
             console.error(error.message);
             res.status(500).send("Internal server error");
         }
-
-        res.send("All ok");
     })
+
+//Route 3)Get loging user detail using : Post "/api/auth/login " No login require
+
+
+router.post('/getuser', fetchuser, async (req, res) => {
+        try {
+            userId = req.user.id;
+            const user = await User.findById(userId).select("-password");
+            res.send(user);
+
+        }
+        catch (error) {
+            console.error(error.message);
+            res.status(500).send("Internal server error");
+        }
+})
 
 module.exports = router;
